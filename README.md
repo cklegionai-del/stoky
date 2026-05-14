@@ -1,280 +1,260 @@
-# opencode-agents
+# 🏥 Stoky — Système de Gestion de Stock Pharmaceutique avec IA
 
-Multi-agent AI development templates for [opencode](https://github.com/sst/opencode).
+> Tableau de bord complet pour pharmacies et dépôts médicaux, avec assistant IA médical intégré (RAG + MedGemma).
 
-## What Is This?
+---
 
-A ready-to-use template for setting up **multi-agent AI development workflows** with opencode. Instead of a single AI assistant doing everything, work is delegated to specialized agents—each optimized for their role.
+## 📋 Table des matières
 
-## The Agents
+- [Présentation](#présentation)
+- [Fonctionnalités](#fonctionnalités)
+- [Architecture technique](#architecture-technique)
+- [Prérequis](#prérequis)
+- [Installation](#installation)
+- [Lancement](#lancement)
+- [Utilisation](#utilisation)
+- [Structure du projet](#structure-du-projet)
+- [API Reference](#api-reference)
 
-### Core Agents
+---
 
-| Agent | Role | Key Trait |
-|-------|------|-----------|
-| **Oscar** | Orchestrator | Coordinates, delegates, synthesizes—never does the work himself |
-| **Scout** | Researcher + Planner | Digs deep into codebases, creates actionable implementation plans |
-| **Ivan** | Implementor | Writes code, runs tests, follows specs precisely |
-| **Jester** | Truth-Teller (default) | Challenges assumptions, finds blind spots (called for risky changes) |
+## Présentation
 
-### Jester Variants
+**Stoky** est une application web de gestion de stock pharmaceutique enrichie d'un assistant IA local. L'assistant répond aux questions médicales et commerciales en français et en arabe, en se basant sur vos données produits et factures via une architecture RAG (Retrieval-Augmented Generation).
 
-| Agent | Model | Use Case |
-|-------|-------|----------|
-| **jester** | Claude Opus | Default truth-teller |
-| **jester_opus** | Claude Opus | Explicit Opus variant |
-| **jester_qwen** | Qwen3 Coder | Code-focused analysis |
-| **jester_grok** | Grok | Alternative perspective |
+Tout fonctionne **en local** — aucune donnée ne quitte votre machine.
 
-### The Orchestrator Pattern
+---
 
-```
-User Request
-    │
-    ▼
-  Oscar ─────────────────────────────┐
-    │                                │
-    ├──→ Scout (research + plan)     │
-    │         │                      │
-    │         ├──→ Jester (challenge)│ ← optional
-    │         │                      │
-    │         ▼                      │
-    └──→ Ivan (implement) ──→ Done ◄─┘
-```
+## Fonctionnalités
 
-**Why this pattern?**
+- 📊 **Tableau de bord** — KPIs en temps réel (produits, stock faible, revenus, factures)
+- 📦 **Gestion produits** — ajout, modification, suivi des stocks
+- 🧾 **Factures** — création et suivi des factures clients
+- 🔄 **Mouvements de stock** — entrées/sorties avec historique
+- 🤖 **Assistant IA (RAG)** — questions/réponses en FR et AR via MedGemma + BGE-M3
+- 🌐 **Multilingue** — interface FR / AR
 
-- **Context efficiency** — Oscar stays lean, delegating heavy lifting to specialists
-- **Separation of concerns** — Research, planning, and implementation are distinct phases
-- **Quality gates** — Jester provides adversarial review for risky changes
-- **Parallel execution** — Independent tasks can run simultaneously
+---
 
-## Jester Consensus Pattern
-
-For high-stakes decisions, run all three Jester variants in parallel and synthesize their feedback:
+## Architecture technique
 
 ```
-Oscar
-  │
-  ├──→ @jester_opus ──┐
-  ├──→ @jester_qwen ──┼──→ Synthesize → Decision
-  └──→ @jester_grok ──┘
+Frontend (React/Next.js)
+        ↓
+Backend (FastAPI)
+        ↓
+   ┌────┴────┐
+SQLite    ChromaDB
+(produits) (vecteurs)
+        ↓
+   Ollama (local)
+   ├── medgemma:4b  → Chat IA
+   └── bge-m3       → Embeddings
 ```
 
-**When to use Jester Consensus:**
+| Composant | Rôle |
+|-----------|------|
+| FastAPI | API REST backend |
+| SQLAlchemy | ORM base de données |
+| ChromaDB | Base vectorielle (RAG) |
+| Ollama | LLM local (medgemma:4b) |
+| BGE-M3 | Modèle d'embeddings |
+| React/Next.js | Interface utilisateur |
 
-- **Major architectural decisions** — Changing core abstractions, adding new patterns
-- **Risky refactors** — Changes touching >5 files or critical paths
-- **Diverse perspectives needed** — When you want multiple AI viewpoints on a problem
-- **Breaking ties** — When the team is stuck or going in circles
+---
 
-**How it works:**
+## Prérequis
 
-1. Oscar dispatches the same question to all three Jesters in parallel
-2. Each Jester analyzes independently using their underlying model
-3. Oscar synthesizes the responses, looking for:
-   - **Agreement** — All three flag the same issue = high confidence
-   - **Disagreement** — Different concerns = explore each angle
-   - **Unique insights** — One Jester sees something others miss = investigate
+- **macOS** (testé sur Apple Silicon) ou Linux
+- **Python 3.11+**
+- **Node.js 18+**
+- **Ollama** installé → [ollama.com](https://ollama.com)
+- **Git**
+- RAM recommandée : 8 GB minimum (16 GB pour medgemma:4b)
 
-Most of what any single Jester says is noise, but consensus across models is signal.
+---
 
 ## Installation
 
-### 1. Install opencode
+### 1. Cloner le projet
 
 ```bash
-curl -fsSL https://opencode.ai/install | bash
+git clone https://github.com/VOTRE_USERNAME/stoky.git
+cd stoky
 ```
 
-Or see [opencode installation docs](https://github.com/sst/opencode#installation).
-
-### 2. Run the installer
+### 2. Installer Ollama et les modèles
 
 ```bash
-# Clone this repo
-git clone https://github.com/yourusername/opencode-agents.git
+# Installer Ollama (macOS)
+brew install ollama
+
+# Démarrer Ollama
+ollama serve
+
+# Dans un autre terminal — télécharger les modèles
+ollama pull medgemma:4b
+ollama pull bge-m3
+```
+
+### 3. Backend Python
+
+```bash
 cd opencode-agents
 
-# Run the installer script
-./install.sh
+# Créer un environnement virtuel
+python3 -m venv venv
+source venv/bin/activate
+
+# Installer les dépendances
+pip install -r requirements.txt
 ```
 
-The installer copies agent definitions to `~/.config/opencode/agent/`.
-
-### 3. Configure opencode
+### 4. Frontend
 
 ```bash
-# Copy the example configuration
-cp opencode.json.example ~/.config/opencode/opencode.json
-
-# Edit to customize models (optional)
-nano ~/.config/opencode/opencode.json
+cd frontend
+npm install
 ```
 
-### 4. Copy AGENTS.md to your project
+---
+
+## Lancement
+
+### Terminal 1 — Ollama
 
 ```bash
-# Copy and customize the template AGENTS.md
-cp AGENTS.md /path/to/your/project/
+ollama serve
 ```
 
-Edit `AGENTS.md` in your project to add project-specific context.
-
-### 5. Start using agents
+### Terminal 2 — Backend
 
 ```bash
-# In your project directory
-opencode
+cd opencode-agents
+source venv/bin/activate
+uvicorn backend.app.main:app --reload --port 8000
 ```
 
-Then talk to Oscar:
+### Terminal 3 — Frontend
+
+```bash
+cd frontend
+npm run dev
+```
+
+Accéder à l'application : **http://localhost:3000**
+
+API disponible sur : **http://localhost:8000**
+
+---
+
+## Utilisation
+
+### Assistant IA
+
+1. Cliquer sur **Assistant IA** dans le menu latéral
+2. Poser une question en français ou en arabe
+3. L'assistant interroge la base de données produits et répond avec contexte
+
+Exemples de questions :
+- *"Quels sont les antibiotiques disponibles ?"*
+- *"Quel est le stock de Paracetamol 500mg ?"*
+- *"ما هي الأدوية المتوفرة للأطفال؟"*
+
+### Indexer vos produits
+
+Après avoir ajouté des produits, indexer pour activer le RAG :
+
+```bash
+curl -X POST http://localhost:8000/api/rag/index
+```
+
+---
+
+## Structure du projet
 
 ```
-@oscar: I need to add user authentication to the app
+stoky/
+├── opencode-agents/
+│   └── backend/
+│       └── app/
+│           ├── main.py              # Point d'entrée FastAPI
+│           ├── database.py          # Config SQLAlchemy
+│           ├── models/
+│           │   ├── base.py
+│           │   └── database.py      # Modèles Product, Invoice...
+│           ├── api/
+│           │   ├── products.py      # Routes produits
+│           │   └── rag.py           # Routes Assistant IA
+│           └── services/
+│               └── rag_service.py   # RAG pipeline (ChromaDB + Ollama)
+├── frontend/
+│   ├── components/                  # Composants React
+│   ├── pages/                       # Pages Next.js
+│   └── package.json
+├── requirements.txt
+├── .gitignore
+└── README.md
 ```
 
-## Configuration
+---
 
-The `opencode.json.example` file contains the full agent configuration:
+## API Reference
 
+### `POST /api/rag/chat`
+
+Poser une question à l'assistant IA.
+
+**Body:**
 ```json
 {
-  "model": "zen/claude-opus-4-5",
-  "default_agent": "oscar",
-  "agent": {
-    "oscar": { ... },
-    "scout": { ... },
-    "ivan": { ... },
-    "jester": { "model": "zen/claude-opus-4-5", ... },
-    "jester_opus": { "model": "zen/claude-opus-4-5", ... },
-    "jester_qwen": { "model": "zen/qwen3-coder-480b", ... },
-    "jester_grok": { "model": "zen/grok-3", ... }
-  }
+  "question": "Quels antibiotiques sont disponibles ?",
+  "language": "fr"
 }
 ```
 
-### Customizing Models
-
-Edit `~/.config/opencode/opencode.json` to:
-
-- **Change the default model** — Update the top-level `"model"` field
-- **Use different Jester models** — Swap model providers for each variant
-- **Add new variants** — Create additional Jester entries with different models
-
-### Why Multiple Jesters?
-
-Different AI models have different strengths and blind spots:
-
-- **Claude Opus** — Strong reasoning, good at finding logical flaws
-- **Qwen3 Coder** — Code-focused, catches implementation issues
-- **Grok** — Alternative perspective, different training data
-
-Running all three in parallel for critical decisions gives you diverse viewpoints.
-
-## File Structure
-
-```
-opencode-agents/
-├── .opencode/
-│   ├── agent/
-│   │   ├── oscar.md          # Orchestrator
-│   │   ├── scout.md          # Researcher + Planner
-│   │   ├── ivan.md           # Implementor
-│   │   └── jester.md         # Truth-Teller
-│   └── skills/
-│       ├── python-code-review/   # Python code review checklist
-│       ├── python-testing/       # pytest patterns and best practices
-│       ├── python-venv/          # Virtual environment management
-│       ├── pr-review/            # Pull request review guidelines
-│       ├── git-commit/           # Commit message conventions
-│       ├── issue-triage/         # GitHub issue triage workflow
-│       ├── prompt-engineering/   # LLM prompt design patterns
-│       ├── data-pipeline/        # Data pipeline best practices
-│       ├── ml-experiment/        # ML experiment tracking
-│       └── agent-tuning/         # Agent prompt optimization
-├── AGENTS.md             # Template for project-specific context
-├── README.md             # This file
-├── install.sh            # Installer script
-└── opencode.json.example # Example configuration
+**Réponse:**
+```json
+{
+  "answer": "Les antibiotiques disponibles sont : Flagyl, Augmentin...",
+  "sources": ["produit_123", "produit_456"]
+}
 ```
 
-## Skills
+Valeurs pour `language` : `"fr"` / `"ar"` / `"en"`
 
-Skills are reusable knowledge modules that agents can load on-demand using the `Skill` tool. Each skill contains domain-specific expertise in a `SKILL.md` file.
-
-### Available Skills
-
-| Skill | Description |
-|-------|-------------|
-| **python-code-review** | Comprehensive Python code review checklist covering style, types, error handling, and performance |
-| **python-testing** | pytest patterns, fixtures, mocking strategies, and test organization |
-| **python-venv** | Virtual environment setup, dependency management, and common pitfalls |
-| **pr-review** | Pull request review guidelines for thorough, constructive feedback |
-| **git-commit** | Conventional commit message format and best practices |
-| **issue-triage** | GitHub issue triage workflow for prioritization and labeling |
-| **prompt-engineering** | LLM prompt design patterns, few-shot examples, and optimization techniques |
-| **data-pipeline** | Data pipeline architecture, validation, and monitoring patterns |
-| **ml-experiment** | ML experiment tracking, reproducibility, and model versioning |
-| **agent-tuning** | Agent prompt optimization and behavior refinement techniques |
-
-### How Skills Work
-
-Agents with `skill: true` in their frontmatter can load skills dynamically:
-
-```yaml
 ---
-tools: [Read, Write, Glob, Grep, Bash, Task]
-skill: true
----
-```
 
-When an agent needs specialized knowledge, they call the Skill tool:
+### `POST /api/rag/index`
 
-```
-Agent: I need to review this Python code thoroughly.
-[Loads skill: python-code-review]
-Agent: Now applying the checklist...
-```
-
-### Creating Custom Skills
-
-1. Create a directory under `.opencode/skills/` with your skill name
-2. Add a `SKILL.md` file with the skill content
-3. Skills are automatically available to agents with `skill: true`
+Indexer tous les produits dans ChromaDB.
 
 ```bash
-mkdir -p ~/.config/opencode/skills/my-custom-skill
-echo "# My Custom Skill\n\nSkill content here..." > ~/.config/opencode/skills/my-custom-skill/SKILL.md
+curl -X POST http://localhost:8000/api/rag/index
 ```
 
-## Key Principles
+---
 
-1. **Oscar delegates everything** — He coordinates but never reads files or writes code
-2. **Scout digs deep, plans lean** — Research flows naturally into actionable tasks
-3. **Ivan follows specs** — No improvisation; if the plan is unclear, ask
-4. **Jester challenges** — Called for complex refactors (>5 files) or risky changes
+### `GET /api/health`
 
-## When to Call Jester
+Vérifier l'état du service.
 
-Jester runs at high temperature (0.8) intentionally—he's a wildcard oracle. Call him when:
+```bash
+curl http://localhost:8000/api/health
+# {"status": "ok", "message": "Service is healthy"}
+```
 
-- Complex refactors touching >5 files
-- Risky architectural changes
-- The team is stuck or going in circles
-- A plan feels "correct" but dead
-- Everyone agrees too quickly (dangerous!)
+---
 
-Most of what Jester says is noise, but buried in there is golden insight. Pan for gold.
+## Notes importantes
 
-## Customization
+- Les modèles Ollama sont téléchargés **une seule fois** (~4.5 GB total)
+- La base ChromaDB est sauvegardée dans `./chroma_db/` — ne pas supprimer
+- Pour réinitialiser l'index RAG : supprimer le dossier `chroma_db/` et relancer `/api/rag/index`
 
-The agent files are designed to be project-agnostic. Customize them by:
+---
 
-1. **Adjusting tool permissions** in the frontmatter
-2. **Adding project-specific rules** to `AGENTS.md`
-3. **Modifying code standards** in Ivan's file for your language/framework
+## Licence
 
-## License
-
-MIT
+Usage privé / commercial — tous droits réservés.
