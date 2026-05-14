@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pharmacy Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #0ea5e9;
+            --primary-dark: #0284c7;
+            --secondary: #8b5cf6;
+            --bg-start: #0f172a;
+            --bg-end: #1e293b;
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --error: #ef4444;
+            --success: #22c55e;
+            --warning: #f59e0b;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow: hidden;
+        }
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--text-primary), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header-right { display: flex; align-items: center; gap: 16px; }
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--warning);
+            transition: background 0.3s ease;
+        }
+        .status-dot.connected { background: var(--success); box-shadow: 0 0 10px var(--success); }
+        .status-dot.disconnected { background: var(--error); box-shadow: 0 0 10px var(--error); }
+        .language-selector { position: relative; }
+        .lang-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .lang-btn:hover { background: rgba(255, 255, 255, 0.1); }
+        .lang-dropdown {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            margin-top: 8px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            overflow: hidden;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.2s ease;
+            z-index: 200;
+        }
+        .lang-dropdown.active { opacity: 1; visibility: visible; transform: translateY(0); }
+        .lang-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            white-space: nowrap;
+        }
+        .lang-option:hover { background: var(--glass-bg); }
+        .lang-option.active { background: rgba(14, 165, 233, 0.2); }
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+        .message {
+            display: flex;
+            gap: 12px;
+            max-width: 85%;
+            animation: messageIn 0.3s ease;
+        }
+        @keyframes messageIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user { align-self: flex-end; flex-direction: row-reverse; }
+        .message.bot { align-self: flex-start; }
+        .message.system { align-self: center; max-width: 100%; }
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .message.user .message-avatar { background: linear-gradient(135deg, var(--primary), var(--secondary)); }
+        .message.bot .message-avatar { background: var(--glass-bg); border: 1px solid var(--glass-border); }
+        .message-bubble {
+            padding: 16px 20px;
+            border-radius: 20px;
+            font-size: 16px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+        .message.bot .message-bubble {
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            color: var(--text-primary);
+            border-bottom-left-radius: 6px;
+        }
+        .message.system .message-bubble {
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 14px;
+            text-align: center;
+        }
+        .message-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            text-align: right;
+        }
+        .message.user .message-time { text-align: left; }
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            border-bottom-left-radius: 6px;
+            max-width: 120px;
+            animation: messageIn 0.3s ease;
+        }
+        .typing-dots { display: flex; gap: 4px; }
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-secondary);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(1) { animation-delay: 0s; }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-8px); }
+        }
+        .typing-text { font-size: 14px; color: var(--text-secondary); }
+        .input-container {
+            padding: 16px 24px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--glass-border);
+        }
+        .input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 8px 8px 8px 20px;
+            transition: border-color 0.2s ease;
+        }
+        .input-wrapper:focus-within { border-color: var(--primary); }
+        .message-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 16px;
+        }
+        .message-input::placeholder { color: var(--text-secondary); }
+        .send-btn {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        .send-btn:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 8px 24px rgba(14, 165, 233, 0.4);
+        }
+        .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .toast-container {
+            position: fixed;
+            top: 80px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 300;
+        }
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            animation: toastIn 0.3s ease;
+            max-width: 350px;
+        }
+        @keyframes toastIn {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .toast.error { border-color: var(--error); }
+        .toast.success { border-color: var(--success); }
+        .toast-icon { font-size: 20px; }
+        .toast.error .toast-icon { color: var(--error); }
+        .toast-message { flex: 1; font-size: 14px; }
+        .toast-close {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 18px;
+            padding: 4px;
+            transition: color 0.2s ease;
+        }
+        .toast-close:hover { color: var(--text-primary); }
+        .retry-btn {
+            padding: 8px 16px;
+            background: var(--error);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .retry-btn:hover { background: #dc2626; }
+        .welcome-message { text-align: center; padding: 40px 20px; }
+        .welcome-icon { font-size: 64px; margin-bottom: 16px; }
+        .welcome-title { font-size: 24px; font-weight: 600; margin-bottom: 8px; }
+        .welcome-subtitle { color: var(--text-secondary); font-size: 16px; }
+        [dir="rtl"] .header { flex-direction: row-reverse; }
+        [dir="rtl"] .header-left { flex-direction: row-reverse; }
+        [dir="rtl"] .header-right { flex-direction: row-reverse; }
+        [dir="rtl"] .message { flex-direction: row-reverse; }
+        [dir="rtl"] .message.user { flex-direction: row; }
+        [dir="rtl"] .message-bubble { text-align: right; }
+        [dir="rtl"] .input-wrapper { flex-direction: row-reverse; padding: 8px 20px 8px 8px; }
+        [dir="rtl"] .toast-container { right: auto; left: 24px; }
+        @keyframes toastInRTL {
+            from { opacity: 0; transform: translateX(-100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        [dir="rtl"] .toast { animation: toastInRTL 0.3s ease; }
+        @media (max-width: 640px) {
+            .header { padding: 12px 16px; }
+            .title { font-size: 20px; }
+            .chat-container { padding: 16px; }
+            .message { max-width: 90%; }
+            .message-bubble { padding: 12px 16px; font-size: 15px; }
+            .input-container { padding: 12px 16px; }
+            .toast-container { right: 16px; left: 16px; }
+            .toast { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <header class="header">
+            <div class="header-left">
+                <div class="logo">💊</div>
+                <h1 class="title" data-i18n="title">Pharmacy</h1>
+            </div>
+            <div class="header-right">
+                <div class="connection-status">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText" data-i18n="connecting">Connecting...</span>
+                </div>
+                <div class="language-selector">
+                    <button class="lang-btn" id="langBtn">
+                        <span id="currentLangFlag">🇬🇧</span>
+                        <span id="currentLangCode">EN</span>
+                        <span>▼</span>
+                    </button>
+                    <div class="lang-dropdown" id="langDropdown">
+                        <div class="lang-option" data-lang="en"><span>🇬🇧</span><span>English</span></div>
+                        <div class="lang-option" data-lang="fr"><span>🇫🇷</span><span>Français</span></div>
+                        <div class="lang-option" data-lang="ar"><span>🇸🇦</span><span>العربية</span></div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <div class="chat-container" id="chatContainer">
+            <div class="welcome-message">
+                <div class="welcome-icon">🏥</div>
+                <h2 class="welcome-title" data-i18n="welcome">Welcome to Pharmacy Chat</h2>
+                <p class="welcome-subtitle" data-i18n="welcomeSub">Ask us anything about medications</p>
+            </div>
+        </div>
+        <div class="input-container">
+            <div class="input-wrapper">
+                <input type="text" class="message-input" id="messageInput" data-i18n-placeholder="placeholder" placeholder="Type your message...">
+                <button class="send-btn" id="sendBtn">➤</button>
+            </div>
+        </div>
+    </div>
+    <div class="toast-container" id="toastContainer"></div>
+    <script>
+        const API_BASE = 'http://localhost:5002';
+        const TIMEOUT = 10000;
+        
+        const translations = {
+            en: {
+                title: 'Pharmacy',
+                placeholder: 'Type your message...',
+                connecting: 'Connecting...',
+                connected: 'Connected',
+                disconnected: 'Disconnected',
+                retry: 'Retry',
+                typing: 'Thinking...',
+                welcome: 'Welcome to Pharmacy Chat',
+                welcomeSub: 'Ask us anything about medications',
+                connectionFailed: 'Failed to connect to server',
+                apiError: 'Server error occurred',
+                networkError: 'Network error - please check your connection'
+            },
+            fr: {
+                title: 'Pharmacie',
+                placeholder: 'Tapez votre message...',
+                connecting: 'Connexion...',
+                connected: 'Connecté',
+                disconnected: 'Déconnecté',
+                retry: 'Réessayer',
+                typing: 'En train de réfléchir...',
+                welcome: 'Bienvenue sur Pharmacie Chat',
+                welcomeSub: 'Posez-nous vos questions sur les médicaments',
+                connectionFailed: 'Échec de connexion au serveur',
+                apiError: 'Erreur serveur',
+                networkError: 'Erreur réseau - vérifiez votre connexion'
+            },
+            ar: {
+                title: 'صيدلية',
+                placeholder: 'اكتب رسالتك...',
+                connecting: 'جاري الاتصال...',
+                connected: 'متصل',
+                disconnected: 'غير متصل',
+                retry: 'إعادة المحاولة',
+                typing: 'جارٍ التفكير...',
+                welcome: 'مرحباً بك في دردشة الصيدلية',
+                welcomeSub: 'اسألنا أي شيء عن الأدوية',
+                connectionFailed: 'فشل الاتصال بالخادم',
+                apiError: 'خطأ في الخادم',
+                networkError: 'خطأ في الشبكة - تحقق من اتصالك'
+            }
+        };
+
+        const langFlags = { en: '🇬🇧', fr: '🇫🇷', ar: '🇸🇦' };
+        const langCodes = { en: 'EN', fr: 'FR', ar: 'AR' };
+
+        let currentLang = localStorage.getItem('pharmacy-lang') || 'en';
+        let isConnected = false;
+        let isSending = false;
+
+        const chatContainer = document.getElementById('chatContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const langBtn = document.getElementById('langBtn');
+        const langDropdown = document.getElementById('langDropdown');
+        const currentLangFlag = document.getElementById('currentLangFlag');
+        const currentLangCode = document.getElementById('currentLangCode');
+        const toastContainer = document.getElementById('toastContainer');
+
+        function init() {
+            setLanguage(currentLang);
+            testConnection();
+            setupEventListeners();
+        }
+
+        function setupEventListeners() {
+            sendBtn.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            langBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                langDropdown.classList.toggle('active');
+            });
+
+            document.querySelectorAll('.lang-option').forEach(option => {
+                option.addEventListener('click', () => {
+                    setLanguage(option.dataset.lang);
+                    langDropdown.classList.remove('active');
+                });
+            });
+
+            document.addEventListener('click', () => {
+                langDropdown.classList.remove('active');
+            });
+        }
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('pharmacy-lang', lang);
+            
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+            
+            currentLangFlag.textContent = langFlags[lang];
+            currentLangCode.textContent = langCodes[lang];
+            
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.dataset.i18n;
+                if (translations[lang][key]) {
+                    el.textContent = translations[lang][key];
+                }
+            });
+            
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.dataset.i18nPlaceholder;
+                if (translations[lang][key]) {
+                    el.placeholder = translations[lang][key];
+                }
+            });
+
+            document.querySelectorAll('.lang-option').forEach(option => {
+                option.classList.toggle('active', option.dataset.lang === lang);
+            });
+        }
+
+        async function testConnection() {
+            updateConnectionStatus('connecting');
+            
+            try {
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: AbortSignal.timeout(TIMEOUT)
+                });
+                
+                if (response.ok) {
+                    isConnected = true;
+                    updateConnectionStatus('connected');
+                } else {
+                    throw new Error('Health check failed');
+                }
+            } catch (error) {
+                isConnected = false;
+                updateConnectionStatus('disconnected');
+                showToast(translations[currentLang].connectionFailed, 'error', true);
+            }
+        }
+
+        function updateConnectionStatus(status) {
+            statusDot.className = 'status-dot ' + status;
+            
+            const statusKeys = {
+                connecting: 'connecting',
+                connected: 'connected',
+                disconnected: 'disconnected'
+            };
+            
+            statusText.textContent = translations[currentLang][statusKeys[status]];
+            
+            if (status === 'disconnected') {
+                statusText.innerHTML = `${translations[currentLang].disconnected} <button class="retry-btn" onclick="testConnection()">${translations[currentLang].retry}</button>`;
+            }
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || isSending || !isConnected) return;
+            
+            isSending = true;
+            sendBtn.disabled = true;
+            messageInput.disabled = true;
+            
+            addMessage(message, 'user');
+            messageInput.value = '';
+            
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch(`${API_BASE}/chat`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message }),
+                    signal: AbortSignal.timeout(TIMEOUT)
+                });
+                
+                hideTypingIndicator();
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    addMessage(data.response || data.message || JSON.stringify(data), 'bot');
+                } else {
+                    showToast(`${translations[currentLang].apiError}: ${response.status}`, 'error');
+                    addMessage(translations[currentLang].apiError, 'system');
+                }
+            } catch (error) {
+                hideTypingIndicator();
+                
+                if (error.name === 'AbortError') {
+                    showToast(translations[currentLang].apiError, 'error');
+                } else {
+                    showToast(translations[currentLang].networkError, 'error');
+                }
+            } finally {
+                isSending = false;
+                sendBtn.disabled = false;
+                messageInput.disabled = false;
+                messageInput.focus();
+            }
+        }
+
+        function addMessage(text, type) {
+            const welcomeMsg = chatContainer.querySelector('.welcome-message');
+            if (welcomeMsg) welcomeMsg.remove();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const avatar = type === 'user' ? '👤' : '🏥';
+            const time = new Date().toLocaleTimeString(
+                currentLang === 'ar' ? 'ar-SA' : currentLang === 'fr' ? 'fr-FR' : 'en-US',
+                { hour: '2-digit', minute: '2-digit' }
+            );
+            
+            messageDiv.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content">
+                    <div class="message-bubble">${escapeHtml(text)}</div>
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+            
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        let typingIndicator = null;
+
+        function showTypingIndicator() {
+            if (typingIndicator) return;
+            
+            typingIndicator = document.createElement('div');
+            typingIndicator.className = 'message bot';
+            typingIndicator.id = 'typingIndicator';
+            typingIndicator.innerHTML = `
+                <div class="message-avatar">🏥</div>
+                <div class="typing-indicator">
+                    <div class="typing-dots">
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                        <div class="typing-dot"></div>
+                    </div>
+                    <span class="typing-text" data-i18n="typing">${translations[currentLang].typing}</span>
+                </div>
+            `;
+            
+            chatContainer.appendChild(typingIndicator);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            if (typingIndicator) {
+                typingIndicator.remove();
+                typingIndicator = null;
+            }
+        }
+
+        function showToast(message, type = 'error', persistent = false) {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            const icon = type === 'error' ? '⚠️' : '✅';
+            
+            toast.innerHTML = `
+                <span class="toast-icon">${icon}</span>
+                <span class="toast-message">${escapeHtml(message)}</span>
+                <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            if (!persistent) {
+                setTimeout(() => {
+                    toast.remove();
+                }, 5000);
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        init();
+    </script>
+</body>
+</html>

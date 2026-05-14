@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ElderCare Health Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f0f9ff; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 24px; padding: 24px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+        .lang-buttons { display: flex; gap: 8px; }
+        .lang-buttons button { padding: 8px 12px; border: none; background: #e2e8f0; border-radius: 20px; cursor: pointer; }
+        .profiles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .profile-card { background: #f8fafc; border-radius: 16px; padding: 16px; cursor: pointer; border: 2px solid transparent; }
+        .profile-card:hover { border-color: #3b82f6; }
+        .add-card { border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; min-height: 180px; }
+        .btn-primary { background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 40px; cursor: pointer; }
+        .empty-state { text-align: center; padding: 40px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1 id="appTitle">🏥 ElderCare Health Tracker</h1>
+        <div class="lang-buttons">
+            <button data-lang="en">🇬🇧 EN</button>
+            <button data-lang="fr">🇫🇷 FR</button>
+            <button data-lang="ar">🇸🇦 AR</button>
+        </div>
+    </div>
+    <div id="profilesGrid" class="profiles-grid"></div>
+</div>
+<script>
+    const API_URL = 'http://localhost:9003';
+    const translations = {
+        en: { title: "🏥 ElderCare Health Tracker", addProfile: "+ Add Profile", addPerson: "Add Person", upTo7: "Up to 7 residents", emptyTitle: "👋 Welcome", emptyText: "Click + to add your first family member." },
+        fr: { title: "🏥 Suivi de santé", addProfile: "+ Ajouter un profil", addPerson: "Ajouter une personne", upTo7: "Jusqu'à 7 résidents", emptyTitle: "👋 Bienvenue", emptyText: "Cliquez + pour ajouter votre premier membre." },
+        ar: { title: "🏥 متتبع صحة كبار السن", addProfile: "+ إضافة ملف شخصي", addPerson: "إضافة شخص", upTo7: "حتى 7 مقيمين", emptyTitle: "👋 مرحباً", emptyText: "انقر + لإضافة أول فرد من عائلتك." }
+    };
+    let currentLang = localStorage.getItem('lang') || 'en';
+    function setLanguage(lang) {
+        currentLang = lang;
+        localStorage.setItem('lang', lang);
+        document.documentElement.lang = lang;
+        document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+        document.getElementById('appTitle').innerText = translations[lang].title;
+        loadProfiles(); // refresh grid texts
+    }
+    async function loadProfiles() {
+        try {
+            const res = await fetch(`${API_URL}/profiles`);
+            const profiles = await res.json();
+            const grid = document.getElementById('profilesGrid');
+            if (profiles.length === 0) {
+                grid.innerHTML = `<div class="empty-state"><h3>${translations[currentLang].emptyTitle}</h3><p>${translations[currentLang].emptyText}</p><button class="btn-primary" onclick="addProfile()">${translations[currentLang].addProfile}</button></div>`;
+                return;
+            }
+            let html = '';
+            profiles.forEach(p => {
+                html += `<div class="profile-card" onclick="alert('Profile: ${p.name}')"><h3>${p.name}</h3><p>Age: ${p.age || '?'}</p></div>`;
+            });
+            if (profiles.length < 7) {
+                html += `<div class="profile-card add-card" onclick="addProfile()"><span style="font-size:48px;">+</span><div>${translations[currentLang].addPerson}</div><div style="font-size:12px;">${translations[currentLang].upTo7}</div></div>`;
+            }
+            grid.innerHTML = html;
+        } catch(e) { console.error(e); }
+    }
+    function addProfile() {
+        const name = prompt("Name:");
+        if (name) {
+            fetch(`${API_URL}/profiles`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name })
+            }).then(() => loadProfiles());
+        }
+    }
+    document.querySelectorAll('.lang-buttons button').forEach(btn => {
+        btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
+    });
+    loadProfiles();
+</script>
+</body>
+</html>

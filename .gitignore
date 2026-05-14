@@ -59,3 +59,4 @@ htmlcov/
 *.log
 .env
 .env.local
+.aider*
