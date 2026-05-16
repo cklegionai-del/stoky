@@ -311,5 +311,24 @@
     "profile": "Profil",
     "organization": "Organisation",
     "notifications": "Notifications"
+  },
+  "calls": {
+    "title": "Enregistrements d'appels",
+    "upload": "Télécharger un appel",
+    "dragDrop": "Glisser-déposer ou cliquez pour parcourir",
+    "formats": "MP3, WAV, TXT, PDF, XLSX (max 500 Mo)",
+    "browse": "Parcourir les fichiers",
+    "processing": "Traitement en cours...",
+    "recordings": "Enregistrements",
+    "uploadFailed": "Échec du téléchargement",
+    "noCalls": "Aucun appel pour le moment"
+  },
+  "upload": {
+    "title": "Télécharger un enregistrement",
+    "description": "Sélectionnez un fichier audio (MP3 ou WAV) pour l'analyse IA",
+    "cancel": "Annuler",
+    "dragDrop": "Glisser-déposer ou cliquez pour parcourir",
+    "formats": "MP3 ou WAV (max 500 Mo)",
+    "browse": "Parcourir les fichiers"
   }
 }
