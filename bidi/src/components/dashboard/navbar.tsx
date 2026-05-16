@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { logout } from "@/lib/actions"
-import { useRouter } from "next/navigation"
+import { useRouter } from "@/navigation"
 import { LocaleSwitcher } from "@/components/ui/locale-switcher"
 
 interface NavbarProps {

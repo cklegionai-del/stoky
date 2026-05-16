@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { useRouter } from "next-intl/navigation"
+import { useRouter } from "@/navigation"
 
 const locales = [
   { code: "en", label: "English", flag: "🇬🇧" },
