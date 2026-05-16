@@ -326,6 +326,8 @@ export async function createRubric(formData: FormData) {
   if (!session?.user?.id) return { error: "Unauthorized" }
 
   const organizationId = (session.user as any).organizationId
+  if (!organizationId) return { error: "No organization" }
+
   const data = JSON.parse(formData.get("data") as string)
   const parsed = rubricSchema.safeParse(data)
   if (!parsed.success) return { error: "Invalid rubric data" }
@@ -357,13 +359,15 @@ export async function createRubric(formData: FormData) {
   return { success: true, rubricId: rubric.id }
 }
 
-// ─── Keyword Actions ──────────────────────────────────────
+// ─── Keyword Actions ───────────────────────────────────────
 
 export async function createKeyword(formData: FormData) {
   const session = await auth()
   if (!session?.user?.id) return { error: "Unauthorized" }
 
   const organizationId = (session.user as any).organizationId
+  if (!organizationId) return { error: "No organization" }
+
   const data = JSON.parse(formData.get("data") as string)
   const parsed = keywordSchema.safeParse(data)
   if (!parsed.success) return { error: "Invalid keyword data" }
@@ -386,6 +390,8 @@ export async function createTeam(formData: FormData) {
   if (!session?.user?.id) return { error: "Unauthorized" }
 
   const organizationId = (session.user as any).organizationId
+  if (!organizationId) return { error: "No organization" }
+
   const data = JSON.parse(formData.get("data") as string)
   const parsed = teamSchema.safeParse(data)
   if (!parsed.success) return { error: "Invalid team data" }
