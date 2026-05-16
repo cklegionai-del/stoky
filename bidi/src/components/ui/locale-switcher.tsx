@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter } from "next-intl/navigation"
 
 const locales = [
   { code: "en", label: "English", flag: "🇬🇧" },
@@ -9,6 +9,8 @@ const locales = [
   { code: "ar", label: "العربية", flag: "🇸🇦" },
   { code: "nl", label: "Nederlands", flag: "🇳🇱" },
 ] as const
+
+const localeCodes = ["en", "fr", "ar", "nl"] as const
 
 interface LocaleSwitcherProps {
   currentLocale: string
@@ -23,11 +25,35 @@ export function LocaleSwitcher({ currentLocale, variant = "dropdown" }: LocaleSw
   const current = locales.find((l) => l.code === currentLocale) || locales[0]
 
   function switchLocale(code: string) {
-    // Set the NEXT_LOCALE cookie
+    // Set the NEXT_LOCALE cookie for middleware
     document.cookie = `NEXT_LOCALE=${code}; path=/; max-age=31536000; SameSite=Strict`
 
     startTransition(() => {
-      router.refresh()
+      // Navigate to the same path with the new locale prefix
+      const currentPath = window.location.pathname
+      const segments = currentPath.split("/").filter(Boolean)
+      const firstSegment = segments[0]
+      const isLocale = localeCodes.includes(firstSegment as (typeof localeCodes)[number])
+
+      let newPath: string
+      if (isLocale) {
+        if (code === "en") {
+          // Default locale has no prefix
+          newPath = "/" + segments.slice(1).join("/")
+        } else {
+          segments[0] = code
+          newPath = "/" + segments.join("/")
+        }
+      } else {
+        if (code === "en") {
+          newPath = currentPath
+        } else {
+          newPath = "/" + code + currentPath
+        }
+      }
+
+      if (!newPath || newPath === "/") newPath = "/"
+      router.push(newPath)
     })
 
     setOpen(false)

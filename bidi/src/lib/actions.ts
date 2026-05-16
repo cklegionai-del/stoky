@@ -17,6 +17,19 @@ import {
   keywordSchema,
   teamSchema,
 } from "./validations"
+import { headers } from "next/headers"
+import { locales, defaultLocale } from "@/i18n"
+
+async function getLocalePrefix(): Promise<string> {
+  const headersList = await headers()
+  const url = headersList.get("x-url") || headersList.get("referer") || ""
+  const pathname = new URL(url, "http://localhost").pathname
+  const firstSegment = pathname.split("/")[1]
+  if (locales.includes(firstSegment as any) && firstSegment !== defaultLocale) {
+    return `/${firstSegment}`
+  }
+  return ""
+}
 
 // ─── Auth Actions ─────────────────────────────────────────
 
@@ -40,7 +53,7 @@ export async function authenticate(
     })
 
     revalidatePath("/dashboard")
-    redirect("/dashboard")
+    redirect(`${await getLocalePrefix()}/dashboard`)
   } catch (error) {
     if ((error as any)?.digest?.startsWith("NEXT_REDIRECT")) {
       throw error
@@ -102,7 +115,7 @@ export async function register(
 
     await signIn("credentials", { email, password, redirect: false })
     revalidatePath("/dashboard")
-    redirect("/dashboard")
+    redirect(`${await getLocalePrefix()}/dashboard`)
   } catch (error) {
     if ((error as any)?.digest?.startsWith("NEXT_REDIRECT")) {
       throw error
@@ -113,7 +126,7 @@ export async function register(
 
 export async function logout() {
   await signOut({ redirect: false })
-  redirect("/login")
+  redirect(`${await getLocalePrefix()}/login`)
 }
 
 // ─── Call Actions ─────────────────────────────────────────
